@@ -37,7 +37,7 @@ export function MultiDialogTrigger({
   locator: string;
   asChild?: boolean;
 }) {
-  const { register, deregister, setOpen } = useMultiDialog(locator);
+  const { register, setOpen } = useMultiDialog(locator);
 
   useEffect(() => {
     register();
@@ -102,10 +102,5 @@ export function useMultiDialog(locator: string) {
     });
   };
 
-  return {
-    open,
-    setOpen,
-    register,
-    deregister,
-  };
+  return { open, setOpen, register, deregister };
 }

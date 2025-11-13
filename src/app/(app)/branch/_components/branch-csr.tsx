@@ -17,6 +17,7 @@ import {
   EllipsisVerticalIcon,
   PencilIcon,
   PlusIcon,
+  SlidersHorizontalIcon,
   Trash2Icon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -45,6 +46,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useQueryStates } from "nuqs";
+import { Input } from "@/components/ui/input";
+import PaginationBuilder from "@/components/custom/pagination";
 
 export default function BranchCSR({
   defaultValue,
@@ -92,6 +95,13 @@ export default function BranchCSR({
             <BranchForm form={form} onSubmit={mc.create} />
           </DialogContent>
         </Dialog>
+      </section>
+      <section className="flex gap-5">
+        <Input className="flex-1" />
+        <Button variant={"secondary"}>
+          <SlidersHorizontalIcon />
+          <span>Filter</span>
+        </Button>
       </section>
       <section>
         <Card>
@@ -157,7 +167,9 @@ export default function BranchCSR({
       </section>
       <section>
         <Card>
-          <CardFooter></CardFooter>
+          <CardFooter className="justify-end">
+            <PaginationBuilder />
+          </CardFooter>
         </Card>
       </section>
     </div>

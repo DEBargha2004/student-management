@@ -33,7 +33,7 @@ const DEFAULT_ERROR_MESSAGE = "Something went wrong";
 
 export function useModuleConstructor<
   T extends Item,
-  U,
+  U extends Record<string, any>,
   Q extends Record<string, any>
 >(params: TModuleConstructor<T, U, Q>, defaultValue?: T[]) {
   const [_localState, _setLocalState] = useState<T[]>(defaultValue ?? []);

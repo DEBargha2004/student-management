@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import { Session, User } from "better-auth";
 import { actionError, catchError } from "./utils";
 import z from "zod";
+import { redirect } from "next/navigation";
 
 type TErrorCode = "no-user";
 
@@ -20,11 +21,15 @@ export type ActionResponse<T> = ActionError | ActionSuccess<T>;
 
 export class Action {
   static async authenticate<T>(
-    op: (props: { session: Session; user: User }) => Promise<T | ActionError>
+    op: (props: { session: Session; user: User }) => Promise<T | ActionError>,
+    navigate?: boolean
   ): Promise<ActionError | T> {
     const authInfo = await auth.api.getSession({ headers: await headers() });
 
-    if (!authInfo?.user) return actionError(errorCode["no-user"]);
+    if (!authInfo?.user) {
+      if (navigate) redirect("/auth/sign-in");
+      return actionError(errorCode["no-user"]);
+    }
 
     return op(authInfo);
   }
