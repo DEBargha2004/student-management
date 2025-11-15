@@ -8,6 +8,7 @@ export const branch = pgTable("branch", {
   address: text("address"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updateAt: timestamp("updated_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export type TDBBranch = typeof branch.$inferSelect;

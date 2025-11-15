@@ -14,6 +14,10 @@ export default function Loading() {
           <span>New Branch</span>
         </Button>
       </section>
+      <section className="flex gap-5">
+        <Skeleton className="w-full h-10 rounded" />
+        <Skeleton className="h-10 w-20" />
+      </section>
       <section>
         <Card>
           <CardContent className="space-y-5">

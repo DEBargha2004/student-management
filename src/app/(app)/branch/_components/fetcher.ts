@@ -1,3 +1,5 @@
+import { deleteBranch } from "@/actions/branch/delete";
+import { editBranch } from "@/actions/branch/edit";
 import { getBranches } from "@/actions/branch/get";
 import { createNewBranch } from "@/actions/branch/new";
 import { TDBBranch } from "@/db/schema";
@@ -26,10 +28,10 @@ export const branchFetcher = {
     return createNewBranch(props);
   },
   update: async (id: Id, props: TBranchSchema) => {
-    return actionSuccess({} as TDBBranch);
+    return editBranch(id, props);
   },
 
   delete: async (id: Id) => {
-    return actionSuccess(undefined);
+    return deleteBranch(id);
   },
 };

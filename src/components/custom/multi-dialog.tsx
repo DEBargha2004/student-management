@@ -58,14 +58,32 @@ export function MultiDialogTrigger({
 export function MultiDialogContent({
   children,
   id,
+  ...props
 }: {
   children: React.ReactNode;
   id: string;
+  open?: boolean;
+  onOpenChange?: (e: boolean) => void;
 }) {
   const { open, setOpen } = useMultiDialog(id);
 
+  useEffect(() => {
+    if (props.open !== undefined) {
+      setOpen(() => props.open!);
+    }
+  }, [props.open]);
+
+  useEffect(() => {
+    props.onOpenChange?.(open);
+  }, [open]);
+
   return (
-    <Dialog open={open} onOpenChange={(e) => setOpen(() => e)}>
+    <Dialog
+      open={open}
+      onOpenChange={(e) => {
+        setOpen(() => e);
+      }}
+    >
       <DialogContent>{children}</DialogContent>
     </Dialog>
   );
@@ -77,7 +95,7 @@ export function useMultiDialog(locator: string) {
   if (!context)
     throw new Error("useMultiDialog should be used within MultiDialogContext");
 
-  const open = context.open[locator];
+  const open = context.open[locator] ?? false;
   const setOpen = (fn: (state: boolean) => boolean) => {
     context.setOpen((p) => {
       const clone = deepClone(p);

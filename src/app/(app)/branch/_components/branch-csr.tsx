@@ -24,7 +24,7 @@ import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { branchFetcher, branchSearchParams, SearchParamProps } from "./fetcher";
 import BranchForm from "@/components/custom/forms/branch";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -48,6 +48,7 @@ import {
 import { useQueryStates } from "nuqs";
 import { Input } from "@/components/ui/input";
 import PaginationBuilder from "@/components/custom/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BranchCSR({
   defaultValue,
@@ -63,20 +64,45 @@ export default function BranchCSR({
     history: "push",
   });
 
-  const mc = useModuleConstructor<TDBBranch, TBranchSchema, SearchParamProps>(
-    {
-      queryOps: queryProps,
-      get: branchFetcher.get,
-      create: branchFetcher.create,
-      update: branchFetcher.update,
-      delete: branchFetcher.delete,
+  const mc = useModuleConstructor<TDBBranch, TBranchSchema, SearchParamProps>({
+    queryOps: queryProps,
+    get: {
+      action: branchFetcher.get,
+      onGetError(message) {},
     },
-    defaultValue
-  );
+    create: {
+      action: branchFetcher.create,
+      onCreateSuccess(data) {},
+      onCreateError(data) {},
+    },
+    update: {
+      action: branchFetcher.update,
+      onUpdateSuccess(data) {},
+      onUpdateError(data) {},
+    },
+    delete: {
+      action: branchFetcher.delete,
+      onDeleteSuccess(data) {},
+      onDeleteError(data) {},
+    },
+    editing: {
+      onEditStart(data) {
+        form.reset({
+          title: data.title,
+          address: data.address ?? "",
+        });
+      },
+      onEditEnd() {
+        form.reset(defaultValues());
+      },
+    },
+    defaultValue,
+  });
 
   useEffect(() => {
     if (!mc.popoverOpen) form.reset();
   }, [mc.popoverOpen]);
+
   return (
     <div className="space-y-6">
       <section className="flex justify-between items-center">
@@ -97,7 +123,13 @@ export default function BranchCSR({
         </Dialog>
       </section>
       <section className="flex gap-5">
-        <Input className="flex-1" />
+        <Input
+          className="flex-1"
+          value={queryProps.q}
+          onChange={(e) =>
+            setQueryProps((prev) => ({ ...prev, q: e.target.value }))
+          }
+        />
         <Button variant={"secondary"}>
           <SlidersHorizontalIcon />
           <span>Filter</span>
@@ -116,50 +148,76 @@ export default function BranchCSR({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mc.data.map((b) => (
-                  <TableRow key={b.id}>
-                    <TableCell>{b.id}</TableCell>
-                    <TableCell>{b.title}</TableCell>
-                    <TableCell>{b.address}</TableCell>
-                    <TableCell>
-                      <MultiDialog>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant={"secondary"}
-                              size={"icon"}
-                              className="rounded-full"
-                            >
-                              <EllipsisVerticalIcon />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <MultiDialogTrigger locator="edit" asChild>
-                              <DropdownMenuItem>
-                                <PencilIcon /> <span>Edit</span>
-                              </DropdownMenuItem>
-                            </MultiDialogTrigger>
-                            <MultiDialogTrigger locator="delete" asChild>
-                              <DropdownMenuItem variant="destructive">
-                                <Trash2Icon /> <span>Delete</span>
-                              </DropdownMenuItem>
-                            </MultiDialogTrigger>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <MultiDialogContent id="edit">
-                          <DialogHeader>
-                            <DialogTitle>Edit</DialogTitle>
-                          </DialogHeader>
-                        </MultiDialogContent>
-                        <MultiDialogContent id="delete">
-                          <DialogHeader>
-                            <DialogTitle>Delete</DialogTitle>
-                          </DialogHeader>
-                        </MultiDialogContent>
-                      </MultiDialog>
+                {mc.isFetching &&
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell colSpan={4}>
+                        <Skeleton className="w-full h-10 rounded" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                {mc.isEmpty && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="">
+                      <p className="flex justify-center py-5 text-muted-foreground italic">
+                        No Data Found
+                      </p>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
+                {!mc.isFetching &&
+                  mc.data.map((b) => (
+                    <TableRow key={b.id}>
+                      <TableCell>{b.id}</TableCell>
+                      <TableCell>{b.title}</TableCell>
+                      <TableCell>{b.address}</TableCell>
+                      <TableCell>
+                        <MultiDialog>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant={"secondary"}
+                                size={"icon"}
+                                className="rounded-full"
+                              >
+                                <EllipsisVerticalIcon />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <MultiDialogTrigger locator="edit" asChild>
+                                <DropdownMenuItem>
+                                  <PencilIcon /> <span>Edit</span>
+                                </DropdownMenuItem>
+                              </MultiDialogTrigger>
+                              <MultiDialogTrigger locator="delete" asChild>
+                                <DropdownMenuItem variant="destructive">
+                                  <Trash2Icon /> <span>Delete</span>
+                                </DropdownMenuItem>
+                              </MultiDialogTrigger>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <MultiDialogContent
+                            id="edit"
+                            open={mc.isEditing(b.id)}
+                            onOpenChange={mc.onActiveEditChange(b.id)}
+                          >
+                            <DialogHeader>
+                              <DialogTitle>Edit</DialogTitle>
+                            </DialogHeader>
+                            <BranchForm
+                              form={form}
+                              onSubmit={(data) => mc.update(b.id, data)}
+                            />
+                          </MultiDialogContent>
+                          <MultiDialogContent id="delete">
+                            <DialogHeader>
+                              <DialogTitle>Delete</DialogTitle>
+                            </DialogHeader>
+                          </MultiDialogContent>
+                        </MultiDialog>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -167,7 +225,7 @@ export default function BranchCSR({
       </section>
       <section>
         <Card>
-          <CardFooter className="justify-end">
+          <CardFooter className="ml-auto">
             <PaginationBuilder />
           </CardFooter>
         </Card>
