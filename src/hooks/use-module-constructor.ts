@@ -9,7 +9,9 @@ export type Item = { id: Id } & Record<string, any>;
 export type DeleteResPayload = { message: string };
 
 export type Get<T, Q> = {
-  action: (config: Q) => Promise<ActionResponse<T[]>>;
+  action: (
+    config: Q
+  ) => Promise<ActionResponse<{ records: T[]; count: number }>>;
   onGetError?: (message: string) => void;
 };
 export type Create<T, U> = {
@@ -38,7 +40,7 @@ export type TModuleConstructor<T, U, Q> = {
     onEditStart: (data: T) => void;
     onEditEnd: () => void;
   };
-  defaultValue?: T[];
+  defaultValue?: { records: T[]; count: number };
 };
 
 function normalizeQuery(queryOps: Record<string, any>) {
@@ -53,27 +55,34 @@ export function useModuleConstructor<
   U extends Record<string, any>,
   Q extends Record<string, any>
 >(config: TModuleConstructor<T, U, Q>) {
-  const [_localState, _setLocalState] = useState<T[]>(
-    config.defaultValue ?? []
+  const [records, setRecords] = useState<T[]>(
+    config.defaultValue?.records ?? []
   );
-  const [isFetching, setIsFetching] = useState(false);
-  const queryKey = normalizeQuery(config.queryOps);
+  const [loaders, setLoaders] = useState({
+    isFetching: false,
+    isDeleting: false,
+  });
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [activeEdit, setActiveEdit] = useState<Id>("");
+  const [totalRecords, setTotalRecords] = useState<number>(
+    config.defaultValue?.count ?? 0
+  );
+
+  const queryKey = normalizeQuery(config.queryOps);
 
   const isFirstRender = useRef(true);
   const isEmpty = useMemo(() => {
-    if (isFetching) return false;
-    if (_localState.length) return false;
+    if (loaders.isFetching) return false;
+    if (records.length) return false;
     return true;
-  }, [isFetching, _localState]);
+  }, [loaders.isFetching, records]);
 
   const isEditing = (id: Id) => activeEdit === id;
 
   const onActiveEditChange = (id: Id) => {
     return (e: boolean) => {
       if (e) {
-        const data = _localState.find((s) => s.id === id);
+        const data = records.find((s) => s.id === id);
         if (data) {
           config.editing.onEditStart(data);
           setActiveEdit(id);
@@ -98,7 +107,7 @@ export function useModuleConstructor<
     }
 
     config.update.onUpdateSuccess?.(res.data);
-    _setLocalState((prev) =>
+    setRecords((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...res.data } : item))
     );
     onActiveEditChange(id)(false);
@@ -119,12 +128,14 @@ export function useModuleConstructor<
     }
 
     config.create.onCreateSuccess?.(res.data);
-    _setLocalState((prev) => [...prev, res.data]);
+    setRecords((prev) => [...prev, res.data]);
+    setTotalRecords((c) => c + 1);
     setPopoverOpen(false);
     return res.data;
   }
 
   async function deleteRecord(id: Id) {
+    setLoaders((p) => ({ ...p, isDeleting: true }));
     const [err, res] = await catchError(config.delete.action(id));
 
     if (err) {
@@ -137,7 +148,9 @@ export function useModuleConstructor<
       return config.delete.onDeleteError?.(res.message);
     }
 
-    _setLocalState((p) => p.filter((item) => item.id !== id));
+    setRecords((p) => p.filter((item) => item.id !== id));
+    setTotalRecords((c) => c - 1);
+    setLoaders((p) => ({ ...p, isDeleting: false }));
     config.delete.onDeleteSuccess?.(res.data);
   }
 
@@ -150,7 +163,7 @@ export function useModuleConstructor<
     const controller = new AbortController();
 
     const fetchData = async () => {
-      setIsFetching(true);
+      setLoaders((prev) => ({ ...prev, isFetching: true }));
       try {
         const res = await config.get.action(config.queryOps);
         if (controller.signal.aborted) return;
@@ -158,11 +171,13 @@ export function useModuleConstructor<
         if (isActionError(res)) {
           return config.get.onGetError?.(res.message);
         }
-        _setLocalState(res.data);
+        setRecords(res.data.records);
+        setTotalRecords(res.data.count);
       } catch (error) {
         config.get.onGetError?.((error as Error).message);
       } finally {
-        if (!controller.signal.aborted) setIsFetching(false);
+        if (!controller.signal.aborted)
+          setLoaders((prev) => ({ ...prev, isFetching: false }));
       }
     };
 
@@ -176,14 +191,15 @@ export function useModuleConstructor<
 
   return {
     create,
-    data: _localState,
+    data: records,
     update,
     deleteRecord,
     popoverOpen,
     setPopoverOpen,
-    isFetching,
+    loaders,
     isEmpty,
     isEditing,
     onActiveEditChange,
+    totalRecords,
   };
 }

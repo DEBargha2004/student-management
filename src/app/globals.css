@@ -120,3 +120,7 @@
     @apply bg-background text-foreground;
   }
 }
+
+@utility important {
+  @apply text-primary hover:underline hover:bg-primary/20 px-1 py-0.5 rounded-lg transition-all cursor-pointer;
+}

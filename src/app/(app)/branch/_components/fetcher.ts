@@ -6,22 +6,25 @@ import { TDBBranch } from "@/db/schema";
 import { Id } from "@/hooks/use-module-constructor";
 import { actionSuccess } from "@/lib/utils";
 import { TBranchSchema } from "@/schema/branch";
-import { createLoader, parseAsString } from "nuqs/server";
-
-export type SearchParamProps = {
-  q?: string;
-  last?: string;
-};
+import {
+  createLoader,
+  parseAsIndex,
+  parseAsString,
+  type inferParserType,
+} from "nuqs/server";
 
 export const branchSearchParams = {
   q: parseAsString.withDefault(""),
-  last: parseAsString.withDefault(""),
+  page: parseAsIndex.withDefault(1),
+  limit: parseAsIndex.withDefault(20),
 };
 
 export const loadBranchSearchParams = createLoader(branchSearchParams);
 
+export type BranchSearchParamProps = inferParserType<typeof branchSearchParams>;
+
 export const branchFetcher = {
-  get: async (props: SearchParamProps) => {
+  get: async (props: BranchSearchParamProps) => {
     return getBranches(props);
   },
   create: async (props: TBranchSchema) => {

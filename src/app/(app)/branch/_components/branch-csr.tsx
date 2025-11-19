@@ -4,7 +4,10 @@ import BreadCrumbConstructor from "@/components/custom/bread-crumb-constructor";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -15,14 +18,18 @@ import { branchSchema, defaultValues, TBranchSchema } from "@/schema/branch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   EllipsisVerticalIcon,
+  Loader2,
   PencilIcon,
   PlusIcon,
-  SlidersHorizontalIcon,
   Trash2Icon,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { branchFetcher, branchSearchParams, SearchParamProps } from "./fetcher";
+import {
+  branchFetcher,
+  BranchSearchParamProps,
+  branchSearchParams,
+} from "./fetcher";
 import BranchForm from "@/components/custom/forms/branch";
 import { useEffect, useState } from "react";
 import {
@@ -49,11 +56,14 @@ import { useQueryStates } from "nuqs";
 import { Input } from "@/components/ui/input";
 import PaginationBuilder from "@/components/custom/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BranchRecord } from "@/actions/branch/get";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function BranchCSR({
   defaultValue,
 }: {
-  defaultValue?: TDBBranch[];
+  defaultValue?: { records: BranchRecord[]; count: number };
 }) {
   const pathname = usePathname();
   const form = useForm<TBranchSchema>({
@@ -63,8 +73,13 @@ export default function BranchCSR({
   const [queryProps, setQueryProps] = useQueryStates(branchSearchParams, {
     history: "push",
   });
+  const [chanllengeInputString, setChallengeInputString] = useState("");
 
-  const mc = useModuleConstructor<TDBBranch, TBranchSchema, SearchParamProps>({
+  const mc = useModuleConstructor<
+    BranchRecord,
+    TBranchSchema,
+    BranchSearchParamProps
+  >({
     queryOps: queryProps,
     get: {
       action: branchFetcher.get,
@@ -82,7 +97,9 @@ export default function BranchCSR({
     },
     delete: {
       action: branchFetcher.delete,
-      onDeleteSuccess(data) {},
+      onDeleteSuccess(data) {
+        toast.success(data.message);
+      },
       onDeleteError(data) {},
     },
     editing: {
@@ -98,6 +115,14 @@ export default function BranchCSR({
     },
     defaultValue,
   });
+
+  const handleNavigate = (page: number) => {
+    setQueryProps((props) => ({ ...props, page }));
+  };
+
+  useEffect(() => {
+    setChallengeInputString("");
+  }, [mc.data.length]);
 
   useEffect(() => {
     if (!mc.popoverOpen) form.reset();
@@ -130,10 +155,6 @@ export default function BranchCSR({
             setQueryProps((prev) => ({ ...prev, q: e.target.value }))
           }
         />
-        <Button variant={"secondary"}>
-          <SlidersHorizontalIcon />
-          <span>Filter</span>
-        </Button>
       </section>
       <section>
         <Card>
@@ -148,7 +169,7 @@ export default function BranchCSR({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mc.isFetching &&
+                {mc.loaders.isFetching &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
                       <TableCell colSpan={4}>
@@ -165,7 +186,7 @@ export default function BranchCSR({
                     </TableCell>
                   </TableRow>
                 )}
-                {!mc.isFetching &&
+                {!mc.loaders.isFetching &&
                   mc.data.map((b) => (
                     <TableRow key={b.id}>
                       <TableCell>{b.id}</TableCell>
@@ -213,6 +234,46 @@ export default function BranchCSR({
                             <DialogHeader>
                               <DialogTitle>Delete</DialogTitle>
                             </DialogHeader>
+                            <DialogDescription>
+                              Are you sure want to delete{" "}
+                              <code className="important">{b.title}</code>
+                              &nbsp;situated at{" "}
+                              <code className="important">{b.address}</code>
+                            </DialogDescription>
+                            <div className="space-y-3 mt-3">
+                              <Label className="text-muted-foreground">
+                                Type{" "}
+                                <span className="important">{b.title}</span> to
+                                continue
+                              </Label>
+                              <Input
+                                placeholder={b.title}
+                                className="placeholder:italic"
+                                value={chanllengeInputString}
+                                onChange={(e) =>
+                                  setChallengeInputString(e.target.value)
+                                }
+                              />
+                              <DialogFooter>
+                                <DialogClose asChild>
+                                  <Button variant={"secondary"}>Close</Button>
+                                </DialogClose>
+                                <Button
+                                  variant={"destructive"}
+                                  disabled={
+                                    mc.loaders.isDeleting ||
+                                    b.title !== chanllengeInputString
+                                  }
+                                  onClick={() => mc.deleteRecord(b.id)}
+                                >
+                                  {mc.loaders.isDeleting ? (
+                                    <Loader2 className="animate-spin" />
+                                  ) : (
+                                    "Delete"
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </div>
                           </MultiDialogContent>
                         </MultiDialog>
                       </TableCell>
@@ -225,8 +286,14 @@ export default function BranchCSR({
       </section>
       <section>
         <Card>
-          <CardFooter className="ml-auto">
-            <PaginationBuilder />
+          <CardFooter className="m-0">
+            <PaginationBuilder
+              perPage={queryProps.limit}
+              currentPage={queryProps.page}
+              totalRecords={mc.totalRecords}
+              neighbourCount={1}
+              navigateTo={handleNavigate}
+            />
           </CardFooter>
         </Card>
       </section>
