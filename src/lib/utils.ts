@@ -61,3 +61,13 @@ export function actionSuccess<T>(data: T) {
     data,
   };
 }
+
+export function formatTime(time: string) {
+  const [h, m] = time.split(":");
+  const meridiem = Number(h) >= 12 ? "pm" : "am";
+
+  let hour = Number(h);
+  hour = hour > 12 ? hour - 12 : hour;
+
+  return `${hour}:${m} ${meridiem}`;
+}

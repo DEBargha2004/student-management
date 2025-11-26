@@ -189,6 +189,12 @@ export function useModuleConstructor<
     };
   }, [queryKey]);
 
+  useEffect(() => {
+    return () => {
+      isFirstRender.current = true;
+    };
+  }, []);
+
   return {
     create,
     data: records,

@@ -7,12 +7,6 @@ import { db } from "@/lib/db";
 import { actionSuccess } from "@/lib/utils";
 import { and, desc, gt, isNull, or, sql } from "drizzle-orm";
 
-export type BranchRecord = {
-  id: number;
-  title: string;
-  address: string | null;
-};
-
 export async function getBranches(props: BranchSearchParamProps) {
   const res = await Action.authenticate(async (auth) => {
     const res = await db
@@ -48,6 +42,7 @@ export async function getBranches(props: BranchSearchParamProps) {
             )
           : desc(branch.createdAt)
       );
+
     return actionSuccess({
       records: res,
       count: res[0]?.count ?? 0,

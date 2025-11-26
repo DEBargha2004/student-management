@@ -12,9 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { TDBBranch } from "@/db/schema";
 import { useModuleConstructor } from "@/hooks/use-module-constructor";
-import { branchSchema, defaultValues, TBranchSchema } from "@/schema/branch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   EllipsisVerticalIcon,
@@ -26,11 +24,10 @@ import {
 import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
-  branchFetcher,
-  BranchSearchParamProps,
-  branchSearchParams,
+  batchFetcher,
+  BatchSearchParamProps,
+  batchSearchParams,
 } from "./fetcher";
-import BranchForm from "@/components/custom/forms/branch";
 import { useEffect, useState } from "react";
 import {
   Table,
@@ -58,55 +55,76 @@ import PaginationBuilder from "@/components/custom/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { batchSchema, defaultValues, TBatchSchema } from "@/schema/batch";
+import { BatchRecord } from "@/types/batch";
+import BatchForm from "@/components/custom/forms/batch";
 import { BranchRecord } from "@/types/branch";
+import { getBranches } from "@/actions/branch/get";
+import { catchError, formatTime, isActionError } from "@/lib/utils";
+import { getDay } from "@/constants/days";
 
-export default function BranchCSR({
+export default function BatchCSR({
   defaultValue,
 }: {
-  defaultValue?: { records: BranchRecord[]; count: number };
+  defaultValue?: { records: BatchRecord[]; count: number };
 }) {
   const pathname = usePathname();
-  const form = useForm<TBranchSchema>({
-    resolver: zodResolver(branchSchema),
+  const form = useForm<TBatchSchema>({
+    resolver: zodResolver(batchSchema),
     defaultValues: defaultValues(),
   });
-  const [queryProps, setQueryProps] = useQueryStates(branchSearchParams, {
+  const [queryProps, setQueryProps] = useQueryStates(batchSearchParams, {
     history: "push",
   });
   const [chanllengeInputString, setChallengeInputString] = useState("");
+  const [branchList, setBranchList] = useState<BranchRecord[]>([]);
 
   const mc = useModuleConstructor<
-    BranchRecord,
-    TBranchSchema,
-    BranchSearchParamProps
+    BatchRecord,
+    TBatchSchema,
+    BatchSearchParamProps
   >({
     queryOps: queryProps,
     get: {
-      action: branchFetcher.get,
-      onGetError(message) {},
+      action: batchFetcher.get,
+      onGetError(message) {
+        toast.error(message);
+      },
     },
     create: {
-      action: branchFetcher.create,
-      onCreateSuccess(data) {},
-      onCreateError(data) {},
+      action: batchFetcher.create,
+      onCreateSuccess(data) {
+        toast.success(`${data.title} created successfully`);
+      },
+      onCreateError(data) {
+        toast.error(data);
+      },
     },
     update: {
-      action: branchFetcher.update,
-      onUpdateSuccess(data) {},
-      onUpdateError(data) {},
+      action: batchFetcher.update,
+      onUpdateSuccess(data) {
+        toast.success(`${data.title} Updated Successfully`);
+      },
+      onUpdateError(data) {
+        toast.error(data);
+      },
     },
     delete: {
-      action: branchFetcher.delete,
+      action: batchFetcher.delete,
       onDeleteSuccess(data) {
         toast.success(data.message);
       },
-      onDeleteError(data) {},
+      onDeleteError(data) {
+        toast.error(data);
+      },
     },
     editing: {
       onEditStart(data) {
         form.reset({
           title: data.title,
-          address: data.address ?? "",
+          branch: data.branch.id,
+          day: data.day,
+          timing: data.timing ?? {},
         });
       },
       onEditEnd() {
@@ -128,6 +146,21 @@ export default function BranchCSR({
     if (!mc.popoverOpen) form.reset();
   }, [mc.popoverOpen]);
 
+  useEffect(() => {
+    catchError(getBranches({ limit: 50, q: "", page: 1 })).then(
+      ([err, res]) => {
+        if (err) {
+          return toast.error(err?.message);
+        }
+        if (isActionError(res)) {
+          return toast.error(res.message);
+        }
+
+        setBranchList(res.data.records);
+      }
+    );
+  }, []);
+
   return (
     <div className="space-y-6">
       <section className="flex justify-between items-center">
@@ -136,14 +169,18 @@ export default function BranchCSR({
           <DialogTrigger asChild>
             <Button>
               <PlusIcon />
-              <span>New Branch</span>
+              <span>New Batch</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="hidden" />
             </DialogHeader>
-            <BranchForm form={form} onSubmit={mc.create} />
+            <BatchForm
+              form={form}
+              onSubmit={mc.create}
+              defaultList={{ branches: branchList }}
+            />
           </DialogContent>
         </Dialog>
       </section>
@@ -164,7 +201,8 @@ export default function BranchCSR({
                 <TableRow>
                   <TableHead>Id</TableHead>
                   <TableHead>Title</TableHead>
-                  <TableHead>Address</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Timing</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -172,14 +210,14 @@ export default function BranchCSR({
                 {mc.loaders.isFetching &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={4}>
+                      <TableCell colSpan={5}>
                         <Skeleton className="w-full h-10 rounded" />
                       </TableCell>
                     </TableRow>
                   ))}
                 {mc.isEmpty && (
                   <TableRow>
-                    <TableCell colSpan={4} className="">
+                    <TableCell colSpan={5} className="">
                       <p className="flex justify-center py-5 text-muted-foreground italic">
                         No Data Found
                       </p>
@@ -191,7 +229,16 @@ export default function BranchCSR({
                     <TableRow key={b.id}>
                       <TableCell>{b.id}</TableCell>
                       <TableCell>{b.title}</TableCell>
-                      <TableCell>{b.address}</TableCell>
+                      <TableCell>{b.branch.title}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p>{getDay(b.day)?.label}</p>
+                          <p>
+                            <span>{formatTime(b.timing?.from ?? "")}</span>-
+                            {formatTime(b.timing?.to ?? "")}
+                          </p>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <MultiDialog>
                           <DropdownMenu>
@@ -225,9 +272,12 @@ export default function BranchCSR({
                             <DialogHeader>
                               <DialogTitle>Edit</DialogTitle>
                             </DialogHeader>
-                            <BranchForm
+                            <BatchForm
                               form={form}
                               onSubmit={(data) => mc.update(b.id, data)}
+                              defaultList={{
+                                branches: branchList,
+                              }}
                             />
                           </MultiDialogContent>
                           <MultiDialogContent id="delete">
@@ -238,7 +288,7 @@ export default function BranchCSR({
                               Are you sure want to delete{" "}
                               <code className="important">{b.title}</code>
                               &nbsp;situated at{" "}
-                              <code className="important">{b.address}</code>
+                              {/* <code className="important">{b.address}</code> */}
                             </DialogDescription>
                             <div className="space-y-3 mt-3">
                               <Label className="text-muted-foreground">
