@@ -27,4 +27,17 @@ export const batch = pgTable("batch", {
   deletedAt: timestamp("deleted_at"),
 });
 
+export const standard = pgTable("standard", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  deletedAt: timestamp("deleted_at"),
+});
+
+// export const student = pgTable("student", {
+//   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+//   name: text("name").notNull(),
+// });
+
 export type TDBBranch = typeof branch.$inferSelect;
