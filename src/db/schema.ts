@@ -18,7 +18,9 @@ export const branch = pgTable("branch", {
 
 export const batch = pgTable("batch", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-  branchId: integer("branch_id").references(() => branch.id),
+  branchId: integer("branch_id").references(() => branch.id, {
+    onDelete: "set null",
+  }),
   title: text("title").notNull(),
   day: text("day").notNull(),
   timing: jsonb().$type<Timing>(),
@@ -35,9 +37,18 @@ export const standard = pgTable("standard", {
   deletedAt: timestamp("deleted_at"),
 });
 
-// export const student = pgTable("student", {
-//   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-//   name: text("name").notNull(),
-// });
+export const student = pgTable("student", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  name: text("name").notNull(),
+  standardId: integer("standard_id").references(() => standard.id, {
+    onDelete: "set null",
+  }),
+  branchId: integer("branch_id").references(() => branch.id, {
+    onDelete: "set null",
+  }),
+  batchId: integer("batch_id").references(() => batch.id, {
+    onDelete: "set null",
+  }),
+});
 
 export type TDBBranch = typeof branch.$inferSelect;

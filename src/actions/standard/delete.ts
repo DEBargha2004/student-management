@@ -4,7 +4,7 @@ import { standard } from "@/db/schema";
 import { Id } from "@/hooks/use-module-constructor";
 import { Action } from "@/lib/actions";
 import { db } from "@/lib/db";
-import { actionSuccess, catchError } from "@/lib/utils";
+import { actionSuccess } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 
 export async function deleteStandard(id: Id) {
