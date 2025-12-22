@@ -22,6 +22,44 @@ import { useWatch } from "react-hook-form";
 import { getStandards } from "@/actions/standard/get";
 import { catchError, isActionError } from "@/lib/utils";
 import { StandardRecord } from "@/types/standard";
+import { getBranches } from "@/actions/branch/get";
+import { useEffect, useState } from "react";
+import { BranchRecord } from "@/types/branch";
+import { getBatches } from "@/actions/batch/get";
+import { BatchRecord } from "@/types/batch";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+
+function useSearchable<T>(
+  fetcher: (q: string) => Promise<T[]>,
+  initialValue: T[]
+) {
+  const [list, setList] = useState<T[]>(initialValue);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+      setLoading(true);
+      fetcher(query)
+        .then((v) => {
+          !controller.signal.aborted && setList(v);
+        })
+        .finally(() => {
+          !controller.signal.aborted && setLoading(false);
+        });
+    }, 400);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [query]);
+
+  return { list, loading, setQuery };
+}
 
 export default function StudentForm({
   form,
@@ -32,7 +70,7 @@ export default function StudentForm({
     name: "branchId",
   });
 
-  const handleGetStandardList = async (q: string) => {
+  const getStandardList = async (q: string) => {
     const [err, res] = await catchError(
       getStandards({ q, limit: 30, page: 1 })
     );
@@ -42,6 +80,32 @@ export default function StudentForm({
 
     return res.data.records;
   };
+
+  const getBranchList = async (q: string) => {
+    if (!q) return [];
+    const [err, res] = await catchError(getBranches({ q, limit: 30, page: 1 }));
+
+    if (err) throw new Error(err.message);
+    if (isActionError(res)) throw new Error(res.message);
+
+    return res.data.records;
+  };
+
+  const getBatchList = async (q: string) => {
+    if (!branchId) return [];
+    const [err, res] = await catchError(
+      getBatches({ q, limit: 30, page: 1, branchId: Number(branchId) })
+    );
+
+    if (err) throw new Error(err.message);
+    if (isActionError(res)) throw new Error(res.message);
+
+    return res.data.records;
+  };
+
+  const branchSearchable = useSearchable(getBranchList, []);
+  const standardSearchable = useSearchable(getStandardList, []);
+  const batchSearchable = useSearchable(getBatchList, []);
 
   return (
     <Form {...form}>
@@ -76,7 +140,7 @@ export default function StudentForm({
         </section>
         <FormField
           control={form.control}
-          name="gaurdian"
+          name="guardian"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Guardian</FormLabel>
@@ -112,14 +176,27 @@ export default function StudentForm({
               <FormItem>
                 <FormLabel>Branch</FormLabel>
                 <FormControl>
-                  <SearchSelect>
-                    <SearchSelectTrigger />
+                  <SearchSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    selector={(list, val) =>
+                      list.find((i) => (i as BranchRecord).title === val)
+                    }
+                    list={branchSearchable.list}
+                    loading={branchSearchable.loading}
+                    onQueryChange={branchSearchable.setQuery}
+                  >
+                    <SearchSelectTrigger>
+                      {(data) => (data as BranchRecord)?.title}
+                    </SearchSelectTrigger>
                     <SearchSelectDropdown>
                       <SearchSelectInput />
-                      <SearchSelectContent>
+                      <SearchSelectContent<StandardRecord>>
                         {(list) =>
                           list.map((li) => (
-                            <SearchSelectItem></SearchSelectItem>
+                            <SearchSelectItem key={li.id}>
+                              {li.title}
+                            </SearchSelectItem>
                           ))
                         }
                       </SearchSelectContent>
@@ -137,9 +214,31 @@ export default function StudentForm({
               <FormItem>
                 <FormLabel>Batch</FormLabel>
                 <FormControl>
-                  <SearchSelect>
-                    <SearchSelectTrigger disabled={!branchId} />
-                    <SearchSelectDropdown></SearchSelectDropdown>
+                  <SearchSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    list={batchSearchable.list}
+                    loading={batchSearchable.loading}
+                    onQueryChange={batchSearchable.setQuery}
+                    selector={(list, val) =>
+                      list.find((i) => (i as BatchRecord)?.title === val)
+                    }
+                  >
+                    <SearchSelectTrigger disabled={!branchId}>
+                      {(data) => (data as BatchRecord)?.title}
+                    </SearchSelectTrigger>
+                    <SearchSelectDropdown>
+                      <SearchSelectInput />
+                      <SearchSelectContent<BatchRecord>>
+                        {(list) =>
+                          list.map((li) => (
+                            <SearchSelectItem key={li.id}>
+                              {li.title}
+                            </SearchSelectItem>
+                          ))
+                        }
+                      </SearchSelectContent>
+                    </SearchSelectDropdown>
                   </SearchSelect>
                 </FormControl>
                 <FormMessage />
@@ -153,8 +252,19 @@ export default function StudentForm({
               <FormItem>
                 <FormLabel>Class</FormLabel>
                 <FormControl>
-                  <SearchSelect getData={handleGetStandardList}>
-                    <SearchSelectTrigger />
+                  <SearchSelect
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    list={standardSearchable.list}
+                    onQueryChange={standardSearchable.setQuery}
+                    loading={standardSearchable.loading}
+                    selector={(list, val) =>
+                      list.find((i) => (i as StandardRecord).title === val)
+                    }
+                  >
+                    <SearchSelectTrigger>
+                      {(data) => (data as StandardRecord)?.title}
+                    </SearchSelectTrigger>
                     <SearchSelectDropdown>
                       <SearchSelectInput />
                       <SearchSelectContent<StandardRecord>>
@@ -174,6 +284,17 @@ export default function StudentForm({
             )}
           />
         </section>
+        <Button
+          className="w-full"
+          disabled={form.formState.isSubmitting}
+          type="submit"
+        >
+          {form.formState.isSubmitting ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <span>Create</span>
+          )}
+        </Button>
       </form>
     </Form>
   );

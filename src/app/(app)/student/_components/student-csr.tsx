@@ -24,9 +24,9 @@ import {
 import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
-  standardFetcher,
-  StandardSearchParamProps,
-  standardSearchParams,
+  studentFetcher,
+  StudentSearchParamProps,
+  studentSearchParams,
 } from "./fetcher";
 import { useEffect, useState } from "react";
 import {
@@ -55,25 +55,21 @@ import PaginationBuilder from "@/components/custom/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { catchError, formatTime, isActionError } from "@/lib/utils";
-import { getDay } from "@/constants/days";
-import { StandardRecord } from "@/types/standard";
-import StandardForm from "@/components/custom/forms/form";
 import { defaultValues, studentSchema, TStudentSchema } from "@/schema/student";
 import { StudentRecord } from "@/types/student";
 import StudentForm from "@/components/custom/forms/student";
 
-export default function StandardCSR({
+export default function StudentCSR({
   defaultValue,
 }: {
-  defaultValue?: { records: StandardRecord[]; count: number };
+  defaultValue?: { records: StudentRecord[]; count: number };
 }) {
   const pathname = usePathname();
   const form = useForm<TStudentSchema>({
     resolver: zodResolver(studentSchema),
     defaultValues: defaultValues(),
   });
-  const [queryProps, setQueryProps] = useQueryStates(standardSearchParams, {
+  const [queryProps, setQueryProps] = useQueryStates(studentSearchParams, {
     history: "push",
   });
   const [chanllengeInputString, setChallengeInputString] = useState("");
@@ -81,35 +77,35 @@ export default function StandardCSR({
   const mc = useModuleConstructor<
     StudentRecord,
     TStudentSchema,
-    StandardSearchParamProps
+    StudentSearchParamProps
   >({
     queryOps: queryProps,
     get: {
-      action: standardFetcher.get,
+      action: studentFetcher.get,
       onGetError(message) {
         toast.error(message);
       },
     },
     create: {
-      action: standardFetcher.create,
+      action: studentFetcher.create,
       onCreateSuccess(data) {
-        toast.success(`${data.title} created successfully`);
+        toast.success(`${data.name} added successfully`);
       },
       onCreateError(data) {
         toast.error(data);
       },
     },
     update: {
-      action: standardFetcher.update,
+      action: studentFetcher.update,
       onUpdateSuccess(data) {
-        toast.success(`${data.title} Updated Successfully`);
+        toast.success(`${data.name} Updated Successfully`);
       },
       onUpdateError(data) {
         toast.error(data);
       },
     },
     delete: {
-      action: standardFetcher.delete,
+      action: studentFetcher.delete,
       onDeleteSuccess(data) {
         toast.success(data.message);
       },
@@ -119,9 +115,7 @@ export default function StandardCSR({
     },
     editing: {
       onEditStart(data) {
-        form.reset({
-          title: data.title,
-        });
+        form.reset({});
       },
       onEditEnd() {
         form.reset(defaultValues());
@@ -177,7 +171,12 @@ export default function StandardCSR({
               <TableHeader>
                 <TableRow>
                   <TableHead>Id</TableHead>
-                  <TableHead>Title</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Guardian</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Branch</TableHead>
+                  <TableHead>Batch</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -185,14 +184,14 @@ export default function StandardCSR({
                 {mc.loaders.isFetching &&
                   Array.from({ length: 6 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={3}>
+                      <TableCell colSpan={8}>
                         <Skeleton className="w-full h-10 rounded" />
                       </TableCell>
                     </TableRow>
                   ))}
                 {mc.isEmpty && (
                   <TableRow>
-                    <TableCell colSpan={3} className="">
+                    <TableCell colSpan={8} className="">
                       <p className="flex justify-center py-5 text-muted-foreground italic">
                         No Data Found
                       </p>
@@ -200,10 +199,15 @@ export default function StandardCSR({
                   </TableRow>
                 )}
                 {!mc.loaders.isFetching &&
-                  mc.data.map((b) => (
-                    <TableRow key={b.id}>
-                      <TableCell>{b.id}</TableCell>
-                      <TableCell>{b.title}</TableCell>
+                  mc.data.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell>{s.id}</TableCell>
+                      <TableCell>{s.name}</TableCell>
+                      <TableCell>{s.guardian}</TableCell>
+                      <TableCell>{s.address}</TableCell>
+                      <TableCell>{s.standard.title}</TableCell>
+                      <TableCell>{s.branch.title}</TableCell>
+                      <TableCell>{s.batch.title}</TableCell>
                       <TableCell>
                         <MultiDialog>
                           <DropdownMenu>
@@ -231,15 +235,15 @@ export default function StandardCSR({
                           </DropdownMenu>
                           <MultiDialogContent
                             id="edit"
-                            open={mc.isEditing(b.id)}
-                            onOpenChange={mc.onActiveEditChange(b.id)}
+                            open={mc.isEditing(s.id)}
+                            onOpenChange={mc.onActiveEditChange(s.id)}
                           >
                             <DialogHeader>
                               <DialogTitle>Edit</DialogTitle>
                             </DialogHeader>
                             <StudentForm
                               form={form}
-                              onSubmit={(data) => mc.update(b.id, data)}
+                              onSubmit={(data) => mc.update(s.id, data)}
                             />
                           </MultiDialogContent>
                           <MultiDialogContent id="delete">
@@ -248,18 +252,17 @@ export default function StandardCSR({
                             </DialogHeader>
                             <DialogDescription>
                               Are you sure want to delete{" "}
-                              <code className="important">{b.title}</code>
+                              <code className="important">{s.name}</code>
                               &nbsp;situated at{" "}
                               {/* <code className="important">{b.address}</code> */}
                             </DialogDescription>
                             <div className="space-y-3 mt-3">
                               <Label className="text-muted-foreground">
-                                Type{" "}
-                                <span className="important">{b.title}</span> to
-                                continue
+                                Type <span className="important">{s.name}</span>{" "}
+                                to continue
                               </Label>
                               <Input
-                                placeholder={b.title}
+                                placeholder={s.name}
                                 className="placeholder:italic"
                                 value={chanllengeInputString}
                                 onChange={(e) =>
@@ -274,9 +277,9 @@ export default function StandardCSR({
                                   variant={"destructive"}
                                   disabled={
                                     mc.loaders.isDeleting ||
-                                    b.title !== chanllengeInputString
+                                    s.name !== chanllengeInputString
                                   }
-                                  onClick={() => mc.deleteRecord(b.id)}
+                                  onClick={() => mc.deleteRecord(s.id)}
                                 >
                                   {mc.loaders.isDeleting ? (
                                     <Loader2 className="animate-spin" />

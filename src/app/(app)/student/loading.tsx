@@ -11,7 +11,7 @@ export default function Loading() {
         <BreadCrumbConstructor pathname={"/class"} />
         <Button>
           <PlusIcon />
-          <span>New Class</span>
+          <span>New Student</span>
         </Button>
       </section>
       <section className="flex gap-5">

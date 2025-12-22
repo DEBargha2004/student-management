@@ -40,6 +40,9 @@ export const standard = pgTable("standard", {
 export const student = pgTable("student", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   name: text("name").notNull(),
+  guardian: text("guardian").notNull(),
+  address: text("address").notNull(),
+  phone: text("phone").notNull(),
   standardId: integer("standard_id").references(() => standard.id, {
     onDelete: "set null",
   }),
@@ -49,6 +52,9 @@ export const student = pgTable("student", {
   batchId: integer("batch_id").references(() => batch.id, {
     onDelete: "set null",
   }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export type TDBBranch = typeof branch.$inferSelect;

@@ -1,19 +1,18 @@
 import { isActionError } from "@/lib/utils";
-import BatchCSR from "./_components/standard-csr";
-import { standardFetcher, loadBatchSearchParams } from "./_components/fetcher";
+import { studentFetcher, loadStudentSearchParams } from "./_components/fetcher";
 import { SearchParams } from "nuqs/server";
-import StandardCSR from "./_components/standard-csr";
+import StudentCSR from "./_components/student-csr";
 
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const props = await loadBatchSearchParams(searchParams);
+  const props = await loadStudentSearchParams(searchParams);
 
-  const res = await standardFetcher.get(props);
+  const res = await studentFetcher.get(props);
 
   if (isActionError(res)) throw new Error(res.message);
 
-  return <StandardCSR defaultValue={res.data} />;
+  return <StudentCSR defaultValue={res.data} />;
 }

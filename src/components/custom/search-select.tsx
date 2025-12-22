@@ -90,8 +90,11 @@ type TData = { id: Id } & Record<string, any>;
 type TSearchSelectProps<T extends unknown = TData> = {
   value?: string;
   onValueChange?: (selector: string) => void;
-  getData?: (q: string) => Promise<T[]>;
   children?: React.ReactNode;
+  onQueryChange?: (q: string) => void;
+  list: T[];
+  loading?: boolean;
+  selector?: (list: TData[], val: string) => TData | undefined;
 };
 
 type TSearchSelectContext<T extends unknown = TData> = {
@@ -137,46 +140,37 @@ export function SearchSelect({
   value,
   onValueChange,
   children,
-  getData,
+  list,
+  loading,
+  onQueryChange,
+  selector,
 }: TSearchSelectProps) {
-  const [localData, setLocalData] = useState<TData[]>([]);
-  const [selected, setSelected] = useState<TData>();
+  const [selected, setSelected] = useState<TData>(
+    () => list?.find((li) => li.id === value)!
+  );
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [query, setQuery] = useState("");
 
-  const handleSelect = (selector: string) => {};
+  const handleSelect = (val: string) => {
+    const selected = selector?.(list, val);
+    if (!selected) return;
+
+    setSelected(selected);
+    onValueChange?.(selected.id.toString());
+
+    setPopoverOpen(false);
+  };
 
   useEffect(() => {
-    const controller = new AbortController();
-    const fetchData = async (q: string) => {
-      const [err, res] = await catchError(getData?.(q) ?? Promise.resolve([]));
-      if (err) {
-        toast.error(err.message);
-        return [];
-      }
-      return res;
-    };
-
-    const timeout = setTimeout(() => {
-      setIsLoading(true);
-      fetchData(query)
-        .then((data) => !controller.signal.aborted && setLocalData(data))
-        .finally(() => !controller.signal.aborted && setIsLoading(false));
-    }, 600);
-
-    return () => {
-      controller.abort();
-      clearTimeout(timeout);
-    };
+    onQueryChange?.(query);
   }, [query]);
 
   return (
     <SearchSelectContext.Provider
       value={{
-        list: localData,
+        list,
         selected,
-        isLoading,
+        isLoading: loading ?? false,
         query,
         setQuery,
         handleSelect,
@@ -250,5 +244,6 @@ export function SearchSelectContent<T extends TData = TData>({
 }
 
 export function SearchSelectItem({ children }: TSearchSelectItemProps) {
-  return <CommandItem>{children}</CommandItem>;
+  const { handleSelect } = useSearchSelect();
+  return <CommandItem onSelect={handleSelect}>{children}</CommandItem>;
 }

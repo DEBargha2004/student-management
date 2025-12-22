@@ -1,9 +1,8 @@
-import { deleteStandard } from "@/actions/standard/delete";
-import { editStandard } from "@/actions/standard/edit";
-import { getStandards } from "@/actions/standard/get";
-import { createNewStandard } from "@/actions/standard/new";
+import getStudents from "@/actions/student/get";
+import createNewStudent from "@/actions/student/new";
 import { Id } from "@/hooks/use-module-constructor";
 import { TStandardSchema } from "@/schema/standard";
+import { TStudentSchema } from "@/schema/student";
 import {
   createLoader,
   parseAsIndex,
@@ -11,26 +10,26 @@ import {
   type inferParserType,
 } from "nuqs/server";
 
-export const standardSearchParams = {
+export const studentSearchParams = {
   q: parseAsString.withDefault(""),
   page: parseAsIndex.withDefault(1),
   limit: parseAsIndex.withDefault(20),
 };
 
-export const loadBatchSearchParams = createLoader(standardSearchParams);
+export const loadStudentSearchParams = createLoader(studentSearchParams);
 
-export type StandardSearchParamProps = inferParserType<
-  typeof standardSearchParams
+export type StudentSearchParamProps = inferParserType<
+  typeof studentSearchParams
 >;
 
-export const standardFetcher = {
-  get: async (props: StandardSearchParamProps) => {
-    return getStandards(props);
+export const studentFetcher = {
+  get: async (props: StudentSearchParamProps) => {
+    return getStudents(props);
   },
-  create: async (props: TStandardSchema) => {
-    return createNewStandard(props);
+  create: async (props: TStudentSchema) => {
+    return createNewStudent(props);
   },
-  update: async (id: Id, props: TStandardSchema) => {
+  update: async (id: Id, props: TStudentSchema) => {
     return editStandard(id, props);
   },
 

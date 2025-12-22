@@ -2,6 +2,7 @@
 
 import { BatchSearchParamProps } from "@/app/(app)/batch/_components/fetcher";
 import { batch, branch } from "@/db/schema";
+import { Id } from "@/hooks/use-module-constructor";
 import { Action } from "@/lib/actions";
 import { db } from "@/lib/db";
 import { actionSuccess } from "@/lib/utils";
@@ -10,7 +11,9 @@ import { and, desc, eq, gt, isNull, or, sql } from "drizzle-orm";
 
 type BranchInfo = BatchRecord["branch"];
 
-export async function getBatches(props: BatchSearchParamProps) {
+export async function getBatches(
+  props: BatchSearchParamProps & { branchId?: Id }
+) {
   const res = Action.authenticate(async (auth) => {
     const res = await db
       .select({
@@ -32,6 +35,7 @@ export async function getBatches(props: BatchSearchParamProps) {
         and(
           isNull(batch.deletedAt),
           isNull(branch.deletedAt),
+          ...(props.branchId ? [eq(branch.id, Number(props.branchId))] : []),
           ...(props.q
             ? [
                 or(
