@@ -1,4 +1,11 @@
-import { integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export * from "@/../auth-schema";
 
@@ -55,6 +62,11 @@ export const student = pgTable("student", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at"),
   deletedAt: timestamp("deleted_at"),
+});
+
+export const featureFlags = pgTable("feature-flags", {
+  id: text("id"),
+  value: boolean("value"),
 });
 
 export type TDBBranch = typeof branch.$inferSelect;

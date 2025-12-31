@@ -4,6 +4,7 @@ import { db } from "./db";
 import { env } from "./env";
 import { nextCookies } from "better-auth/next-js";
 import * as authSchema from "@/../auth-schema";
+import { getNewUserRegestrationStatus } from "@/actions/feature-flags/get";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -14,7 +15,7 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
-    disableSignUp: !env.NEW_REGISTRATION,
+    disableSignUp: !(await getNewUserRegestrationStatus()),
   },
   plugins: [nextCookies()],
 });
