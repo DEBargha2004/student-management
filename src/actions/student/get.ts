@@ -80,3 +80,45 @@ export default async function getStudents(props: StudentSearchParamProps) {
     });
   });
 }
+
+export async function getDefaultsForStudentFormUpdate(props: {
+  branchId: string;
+  batchId: string;
+  standardId: string;
+}) {
+  return Action.authenticate(async ({ session, user }) => {
+    const res = await db.transaction(async (trx) => {
+      const _branch = await db
+        .select()
+        .from(branch)
+        .where(eq(branch.id, Number(props.branchId)));
+
+      const _batch = await db
+        .select({
+          id: batch.id,
+          title: batch.title,
+          branch: {
+            id: branch.id,
+            title: branch.title,
+          },
+          timing: batch.timing,
+          day: batch.day,
+        })
+        .from(batch)
+        .leftJoin(branch, eq(batch.branchId, branch.id))
+        .where(eq(batch.id, Number(props.batchId)));
+
+      const _standard = await db
+        .select()
+        .from(standard)
+        .where(eq(standard.id, Number(props.standardId)));
+
+      return {
+        branch: _branch[0],
+        batch: _batch[0],
+        standard: _standard[0],
+      };
+    });
+    return actionSuccess(res);
+  });
+}

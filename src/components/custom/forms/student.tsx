@@ -23,7 +23,7 @@ import { getStandards } from "@/actions/standard/get";
 import { catchError, isActionError } from "@/lib/utils";
 import { StandardRecord } from "@/types/standard";
 import { getBranches } from "@/actions/branch/get";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BranchRecord } from "@/types/branch";
 import { getBatches } from "@/actions/batch/get";
 import { BatchRecord } from "@/types/batch";
@@ -35,6 +35,7 @@ function useSearchable<T>(
   initialValue: T[]
 ) {
   const [list, setList] = useState<T[]>(initialValue);
+
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -58,13 +59,24 @@ function useSearchable<T>(
     };
   }, [query]);
 
+  useEffect(() => {
+    setList(initialValue);
+  }, [initialValue.length]);
+
   return { list, loading, setQuery };
 }
 
 export default function StudentForm({
   form,
   onSubmit,
-}: FormProps<TStudentSchema>) {
+  initialValues,
+}: FormProps<TStudentSchema> & {
+  initialValues?: {
+    branchList?: BranchRecord[];
+    batchList?: BatchRecord[];
+    standardList?: StandardRecord[];
+  };
+}) {
   const branchId = useWatch({
     control: form.control,
     name: "branchId",
@@ -103,9 +115,18 @@ export default function StudentForm({
     return res.data.records;
   };
 
-  const branchSearchable = useSearchable(getBranchList, []);
-  const standardSearchable = useSearchable(getStandardList, []);
-  const batchSearchable = useSearchable(getBatchList, []);
+  const branchSearchable = useSearchable(
+    getBranchList,
+    initialValues?.branchList ?? []
+  );
+  const standardSearchable = useSearchable(
+    getStandardList,
+    initialValues?.standardList ?? []
+  );
+  const batchSearchable = useSearchable(
+    getBatchList,
+    initialValues?.batchList ?? []
+  );
 
   return (
     <Form {...form}>
@@ -263,7 +284,7 @@ export default function StudentForm({
                     }
                   >
                     <SearchSelectTrigger>
-                      {(data) => (data as StandardRecord)?.title}
+                      {(data) => <span>{(data as StandardRecord)?.title}</span>}
                     </SearchSelectTrigger>
                     <SearchSelectDropdown>
                       <SearchSelectInput />

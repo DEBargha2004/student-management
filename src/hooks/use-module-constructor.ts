@@ -207,5 +207,6 @@ export function useModuleConstructor<
     isEditing,
     onActiveEditChange,
     totalRecords,
+    activeEdit,
   };
 }

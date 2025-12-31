@@ -58,6 +58,11 @@ import { toast } from "sonner";
 import { defaultValues, studentSchema, TStudentSchema } from "@/schema/student";
 import { StudentRecord } from "@/types/student";
 import StudentForm from "@/components/custom/forms/student";
+import { BranchRecord } from "@/types/branch";
+import { BatchRecord } from "@/types/batch";
+import { StandardRecord } from "@/types/standard";
+import { getDefaultsForStudentFormUpdate } from "@/actions/student/get";
+import { isActionError } from "@/lib/utils";
 
 export default function StudentCSR({
   defaultValue,
@@ -73,6 +78,11 @@ export default function StudentCSR({
     history: "push",
   });
   const [chanllengeInputString, setChallengeInputString] = useState("");
+  const [defaultFormValues, setDefaultFormValues] = useState<{
+    branchList?: BranchRecord[];
+    batchList?: BatchRecord[];
+    standardList?: StandardRecord[];
+  }>();
 
   const mc = useModuleConstructor<
     StudentRecord,
@@ -114,11 +124,48 @@ export default function StudentCSR({
       },
     },
     editing: {
-      onEditStart(data) {
-        form.reset({});
+      async onEditStart(data) {
+        const res = await getDefaultsForStudentFormUpdate({
+          branchId: data.branch.id.toString(),
+          batchId: data.batch.id.toString(),
+          standardId: data.standard.id.toString(),
+        });
+
+        if (isActionError(res)) {
+          toast.error(res.message);
+          return mc.onActiveEditChange(mc.activeEdit)(false);
+        }
+
+        setDefaultFormValues({
+          batchList: [
+            {
+              id: res.data.batch.id,
+              branch: {
+                id: res.data.branch.id,
+                title: res.data.branch.title,
+              },
+              title: res.data.batch.title,
+              timing: res.data.batch.timing,
+              day: res.data.batch.day,
+            },
+          ],
+          branchList: [res.data.branch],
+          standardList: [res.data.standard],
+        });
+
+        form.reset({
+          name: data.name,
+          guardian: data.guardian,
+          address: data.address,
+          phone: data.phone,
+          standardId: data.standard.id.toString(),
+          branchId: data.branch.id.toString(),
+          batchId: data.batch.id.toString(),
+        });
       },
       onEditEnd() {
         form.reset(defaultValues());
+        setDefaultFormValues(undefined);
       },
     },
     defaultValue,
@@ -202,9 +249,16 @@ export default function StudentCSR({
                   mc.data.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell>{s.id}</TableCell>
-                      <TableCell>{s.name}</TableCell>
+                      <TableCell>
+                        <b>{s.name}</b>
+                        <p className="text-sm text-muted-foreground">
+                          {s.phone}
+                        </p>
+                      </TableCell>
                       <TableCell>{s.guardian}</TableCell>
-                      <TableCell>{s.address}</TableCell>
+                      <TableCell>
+                        <p className="text-wrap max-w-sm">{s.address}</p>
+                      </TableCell>
                       <TableCell>{s.standard.title}</TableCell>
                       <TableCell>{s.branch.title}</TableCell>
                       <TableCell>{s.batch.title}</TableCell>
@@ -244,6 +298,11 @@ export default function StudentCSR({
                             <StudentForm
                               form={form}
                               onSubmit={(data) => mc.update(s.id, data)}
+                              initialValues={{
+                                batchList: defaultFormValues?.batchList,
+                                branchList: defaultFormValues?.branchList,
+                                standardList: defaultFormValues?.standardList,
+                              }}
                             />
                           </MultiDialogContent>
                           <MultiDialogContent id="delete">

@@ -145,9 +145,7 @@ export function SearchSelect({
   onQueryChange,
   selector,
 }: TSearchSelectProps) {
-  const [selected, setSelected] = useState<TData>(
-    () => list?.find((li) => li.id === value)!
-  );
+  const [selected, setSelected] = useState<TData>();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -162,8 +160,16 @@ export function SearchSelect({
   };
 
   useEffect(() => {
+    if (!list.length) return;
+    const selected = list.find((li) => li.id.toString() == value);
+    if (selected) setSelected(selected);
+  }, [list.length]);
+
+  useEffect(() => {
     onQueryChange?.(query);
   }, [query]);
+
+  // console.log("SearchSelect selected:", selected);
 
   return (
     <SearchSelectContext.Provider
@@ -189,6 +195,7 @@ export function SearchSelectTrigger({
   disabled,
 }: TSearchSelectTriggerProps) {
   const { selected } = useSearchSelect();
+
   return (
     <PopoverTrigger asChild>
       <Button
@@ -227,6 +234,7 @@ export function SearchSelectContent<T extends TData = TData>({
 }: TSearchSelectContentProps<T>) {
   const { list, isLoading } = useSearchSelect();
   const showList = !isLoading && !!list.length;
+  // console.log("SearchSelectContent list:", list);
   return (
     <CommandList>
       <CommandEmpty className="h-16 grid place-content-center">

@@ -1,7 +1,8 @@
+import { deleteStudent } from "@/actions/student/delete";
+import editStudent from "@/actions/student/edit";
 import getStudents from "@/actions/student/get";
 import createNewStudent from "@/actions/student/new";
 import { Id } from "@/hooks/use-module-constructor";
-import { TStandardSchema } from "@/schema/standard";
 import { TStudentSchema } from "@/schema/student";
 import {
   createLoader,
@@ -30,10 +31,10 @@ export const studentFetcher = {
     return createNewStudent(props);
   },
   update: async (id: Id, props: TStudentSchema) => {
-    return editStandard(id, props);
+    return editStudent(id, props);
   },
 
   delete: async (id: Id) => {
-    return deleteStandard(id);
+    return deleteStudent(id);
   },
 };
